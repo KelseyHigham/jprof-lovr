@@ -57,7 +57,6 @@ local function msgpackListIntoFile(list, filename)
 end
 
 local function addEvent(name, memCount, annot)
-    print('bark')
     local event = {name, lovr.timer.getTime(), memCount, annot}
     if profData then
         table.insert(profData, event)
