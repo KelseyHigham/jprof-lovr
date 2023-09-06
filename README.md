@@ -1,5 +1,6 @@
 (based on [jprof](https://github.com/pfirsich/jprof) for love2d)
-(doesn't currently produce a valid file on the LÖVR end...)
+
+(doesn't currently produce a valid file on the LÖVR end, probably because I didn't port [this bit](https://github.com/KelseyHigham/jprof-lovr/blob/master/lovr/jprof.lua#L38-L80) carefully enough)
 
 # jprof-lovr
 
