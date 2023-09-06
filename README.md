@@ -1,5 +1,3 @@
-(based on [jprof](https://github.com/pfirsich/jprof) for love2d)
-
 # jprof-lovr
 
 Usually Lua programs are profiled by setting hooks using the built-in function `debug.sethook`, but sadly these hooks are not reliably called in luajit, which makes most profiling libraries for Lua not usable in the current version of [LÖVR](https://lovr.org/).
