@@ -35,15 +35,13 @@ local function getByte(n, byte)
     return bit.rshift(bit.band(n, bit.lshift(0xff, 8*byte)), 8*byte)
 end
 
-
-
-
-
--- LÖVR filesystem code
--- broken: produces a file that can't be read by the viewer
-
+-- -- I need this function (and not just msgpack.pack), so I can pack and write
+-- -- the file in chunks. If we attempt to pack a big table, the amount of memory
+-- -- used during packing can exceed the luajit memory limit pretty quickly, which will
+-- -- terminate the program before the file is written.
 local function msgpackListIntoFile(list, filename)
     local n = #list
+    -- https://github.com/msgpack/msgpack/blob/master/spec.md#array-format-family
     if n < 16 then
         lovr.filesystem.append(filename, string.char(144 + n))
     elseif n < 0xFFFF then
@@ -57,36 +55,6 @@ local function msgpackListIntoFile(list, filename)
         lovr.filesystem.append(filename, msgpack.pack(elem))
     end
 end
-
-
-
--- love2d filesystem code
--- works properly
-
--- -- I need this function (and not just msgpack.pack), so I can pack and write
--- -- the file in chunks. If we attempt to pack a big table, the amount of memory
--- -- used during packing can exceed the luajit memory limit pretty quickly, which will
--- -- terminate the program before the file is written.
--- local function msgpackListIntoFile(list, file)
---     local n = #list
---     -- https://github.com/msgpack/msgpack/blob/master/spec.md#array-format-family
---     if n < 16 then
---         file:write(string.char(144 + n))
---     elseif n < 0xFFFF then
---         file:write(string.char(0xDC, getByte(n, 1), getByte(n, 0)))
---     elseif n < 0xFFffFFff then
---         file:write(string.char(0xDD, getByte(n, 3), getByte(n, 2), getByte(n, 1), getByte(n, 0)))
---     else
---         error("List too big")
---     end
---     for _, elem in ipairs(list) do
---         file:write(msgpack.pack(elem))
---     end
--- end
-
-
-
-
 
 local function addEvent(name, memCount, annot)
     print('bark')
@@ -153,11 +121,8 @@ if not PROF_NOCAPTURE then
         if not profData then
             print("(jprof) No profiling data saved (probably because you called prof.connect())")
         else
-            -- local file, msg = love.filesystem.newFile(filename, "w")
-            -- assert(file, msg)
-            -- msgpackListIntoFile(profData, file)
+            lovr.filesystem.write(filename, '')
             msgpackListIntoFile(profData, filename)
-            -- file:close()
             print(("(jprof) Saved profiling data to '%s'"):format(filename))
         end
     end
