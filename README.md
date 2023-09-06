@@ -1,11 +1,14 @@
-# jprof
+(based on [jprof](https://github.com/pfirsich/jprof) for love2d)
+(doesn't currently produce a valid file on the LÖVR end...)
 
-Usually Lua programs are profiled by setting hooks using the built-in function `debug.sethook`, but sadly these hooks are not reliably called in luajit, which makes most profiling libraries for Lua not usable in the current version of [löve](https://love2d.org/).
+# jprof-lovr
 
-jprof is a semi-makeshift solution for profiling löve applications with some extra work, but while also providing no significant slowdown while profiling.
+Usually Lua programs are profiled by setting hooks using the built-in function `debug.sethook`, but sadly these hooks are not reliably called in luajit, which makes most profiling libraries for Lua not usable in the current version of [LÖVR](https://lovr.org/).
+
+jprof-lovr is a semi-makeshift solution for profiling LÖVR applications with some extra work, but while also providing no significant slowdown while profiling.
 
 # Overview
-jprof requires you to annotate your code with "profiling zones", which form a hierarchical representation of the overall flow of your program and record time taken and memory consumption for each of these zones:
+jprof-lovr requires you to annotate your LÖVR code with "profiling zones", which form a hierarchical representation of the overall flow of your program and record time taken and memory consumption for each of these zones:
 ```lua
 function foo()
     prof.push("do the thing")
@@ -24,37 +27,37 @@ function bar()
 end
 ```
 
-These are then saved to a file in your application's save directory using [fperrad/lua-MessagePack](https://github.com/fperrad/lua-MessagePack), which you can analyze in the viewer:
+These are then saved to a file in your application's save directory using [fperrad/lua-MessagePack](https://github.com/fperrad/lua-MessagePack), which you can analyze in the love2d-based viewer:
 
 ![Time mode](https://user-images.githubusercontent.com/2214632/32568512-c2a04ec8-c4be-11e7-8964-cda8d96f4e9e.png)
 
 ![Memory mode](https://user-images.githubusercontent.com/2214632/32566607-c39c648e-c4b8-11e7-88a5-a6f5d17d6b2c.png)
 
 # Documentation
-Before you annotate your code, you need to copy (not move) `jprof.lua` and `MessagePack.lua` into your game's directory.
+Before you annotate your code, you need to copy (or move) `lovr/jprof.lua` and `lovr/MessagePack.lua` into your LÖVR game's directory.
 
 The most common case does probably look somewhat like this:
 ```lua
-PROF_CAPTURE = true
+PROF_NOCAPTURE = false
 prof = require("jprof")
 
-function love.update(dt)
+function lovr.update(dt)
     prof.push("frame")
     -- push and pop additional zones here
     -- also update your game if you want
 end
 
-function love.draw()
+function lovr.draw()
     -- push and pop additional zones here
     prof.pop("frame")
 end
 
-function love.quit()
+function lovr.quit()
     prof.write("prof.mpack")
 end
 ```
 
-If `PROF_CAPTURE` evaluates to `false` when jprof is imported, all profiling functions are replaced with `function() end` i.e. do nothing, so you can leave them in even for release builds.
+If `PROF_NOCAPTURE` evaluates to `true` when jprof-lovr is imported, all profiling functions are replaced with `function() end` i.e. do nothing, so you can leave them in even for release builds.
 
 Also all other zones have to be pushed inside the `"frame"` zone and whenever `prof.push` or `prof.pop` are called outside of a frame, the viewer will not know how to interpret that data (and error). So make sure capturing is disabled when functions are called that push zones outside of the `"frame"` zone.
 
@@ -63,7 +66,7 @@ For example if you are using a fixed timestep loop (update and draw frames are n
 ```lua
 PROFILE_DRAW = false
 
-function love.update(dt)
+function lovr.update(dt)
     prof.enabled(not PROFILE_DRAW)
     prof.push("frame")
     -- updating
@@ -71,7 +74,7 @@ function love.update(dt)
     prof.enabled(false)
 end
 
-function love.draw()
+function lovr.draw()
     prof.enabled(PROFILE_DRAW)
     prof.push("frame")
     -- drawing
@@ -103,16 +106,17 @@ The default `port` is `1338` and the default `address` is `localhost`.
 jprof does not send out every event by itself, but rather buffers them and sends them out, when this command is called. By default this is called when `prof.pop()` is called and the popped zone is `"frame"` (though only if you did `prof.connect()` earlier).
 
 ## Viewer
-Just start the löve project contained in this repository like this:
+Just start the love2d project contained in this repository like this:
 ```console
-love jprof <projectIdentity> <filename>
+love love/jprof <filepath>
 ```
-With `<projectIdentity>` being the [identity](https://love2d.org/wiki/love.filesystem.setIdentity) (most commonly set in [conf.lua](https://love2d.org/wiki/Config_Files)) of your project and `<filename>` being the filename of the capture file (the one that was passed to `prof.write(filename)`).
+With `<filepath>` being the path to the capture file, probably somewhere in the LÖVR project's [save directory](https://lovr.org/docs/lovr.filesystem#Notes).
 
-### Realtime Profiling
-jprof also supports realtime transmission of profiling data. To use this feature, just start the viewer in listen mode:
+### Realtime Profiling (untested with LÖVR)
+
+jprof also supports realtime transmission of profiling data. To use this feature, just start the love2d viewer in listen mode:
 ```console
-love jprof listen
+love love/jprof listen
 ```
 You may also pass an additional, optional argument to specify a port. The default port used is 1338. In the program you are profiling, call `prof.connect()` (see above) right after importing jprof.
 
