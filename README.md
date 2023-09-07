@@ -39,14 +39,18 @@ PROF_NOCAPTURE = false
 prof = require("jprof")
 
 function lovr.update(dt)
-    prof.push("frame")
+    prof.startFrame()
+    prof.push("update")
     -- push and pop additional zones here
     -- also update your game if you want
+    prof.pop("update")
 end
 
-function lovr.draw()
+function lovr.draw(pass)
+    prof.push("draw")
     -- push and pop additional zones here
-    prof.pop("frame")
+    prof.pop("draw")
+    prof.pushPopGPU(pass)
 end
 
 function lovr.quit()
@@ -56,29 +60,7 @@ end
 
 If `PROF_NOCAPTURE` evaluates to `true` when jprof-lovr is imported, all profiling functions are replaced with `function() end` i.e. do nothing, so you can leave them in even for release builds.
 
-Also all other zones have to be pushed inside the `"frame"` zone and whenever `prof.push` or `prof.pop` are called outside of a frame, the viewer will not know how to interpret that data (and error). So make sure capturing is disabled when functions are called that push zones outside of the `"frame"` zone.
-
-For example if you are using a fixed timestep loop (update and draw frames are not always 1 for 1), you probably want to do something like this instead (excerpt/sketch):
-
-```lua
-PROFILE_DRAW = false
-
-function lovr.update(dt)
-    prof.enabled(not PROFILE_DRAW)
-    prof.push("frame")
-    -- updating
-    prof.pop("frame")
-    prof.enabled(false)
-end
-
-function lovr.draw()
-    prof.enabled(PROFILE_DRAW)
-    prof.push("frame")
-    -- drawing
-    prof.pop("frame")
-    prof.enabled(false)
-end
-```
+Also all other zones have to be pushed after `startFrame()` and if `prof.push` or `prof.pop` are called before the first frame, the viewer will not know how to interpret that data (and error).
 
 ### `prof.push(name, annotation)`
 The `annotation` is optional and appears as metadata in the viewer.
