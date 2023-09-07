@@ -62,7 +62,7 @@ local function msgpackListIntoFile(list, filename)
     end
 end
 
-local function addEvent(name, memCount, annot, gpuPush, gpuPop)
+local function addEvent(name, memCount, annot, gpuPop, gpuPush)
     local event = nil
     if gpuPush then
         event = {name, lovr.timer.getTime(), memCount, annot, gpuPass}
@@ -149,8 +149,8 @@ if not PROF_NOCAPTURE then
         gpuPushTime = lovr.timer.getTime()
         gpuPass = pass
         local memCount = collectgarbage("count")
-        addEvent('GPU', memCount - profMem, annotation, true)
-        addEvent('pop', memCount - profMem, nil,        false, true)
+        addEvent('GPU', memCount - profMem, annotation, false, true)
+        addEvent('pop', memCount - profMem, nil,        true)
 
         if profData then
             profMem = profMem + (collectgarbage("count") - memCount)
@@ -168,8 +168,7 @@ if not PROF_NOCAPTURE then
             for _,v in pairs(gpuPushData) do
                 -- v: {name, gpuPushTime, memCount, annot, pass}
                 if v[5] then
-                    v[4] = v[5]:getStats().memoryUsed/1000 .. ' KB VRAM' -- assuming `memoryUsed` is bytes
-                    -- v[2] = v[2] + v[5]:getStats().submitTime + v[5]:getStats().gpuTime
+                    v[4] = string.format('%.0f ms submit', v[5]:getStats().submitTime/1000)
                     v[5] = nil
                 end
             end
@@ -250,8 +249,9 @@ else
 
     profiler.push = noop
     profiler.pop = noop
+    profiler.pushGPU = noop
+    profiler.popGPU = noop
     profiler.pushPopGPU = noop
-    profiler.startFrame = noop
     profiler.write = noop
     profiler.enabled = noop
     profiler.connect = noop
