@@ -54,7 +54,7 @@ local function lrDown(key)
 end
 
 function love.keypressed(key)
-    local delta = lrDown("ctrl") and 100 or 1
+    local delta = (lrDown("ctrl") or lrDown("gui")) and 100 or 1
     if frames.current then
         if key == "left" then
             if frames.current.index then -- average frames don't have .index
