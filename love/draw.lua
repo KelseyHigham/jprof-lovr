@@ -58,7 +58,16 @@ local flameGraphFuncs = {
         local x
         -- this will be false for averge frames for which we use center=true anyways
         if child.startTime and node.startTime and node.endTime then
-            assert(child.startTime >= node.startTime and child.endTime <= node.endTime)
+
+            -- -- this assert fails because the 'GPU' child can keep running while the current 'frame' node ends and the next 'frame' node begins
+            -- assert(child.startTime >= node.startTime and child.endTime <= node.endTime, 
+            --     "child start and end time doesn\'t fall within node start and end time:\n" ..
+            --     'node.startTime  ' .. node.startTime  .. ',\n' .. 
+            --     'child.startTime ' .. child.startTime .. ',\n' ..
+            --     'child.endTime   ' .. child.endTime   .. ',\n' ..
+            --     'node.endTime    ' .. node.endTime
+            -- )
+
             x = (child.startTime - node.startTime) / (node.endTime - node.startTime)
         else
             x = 0

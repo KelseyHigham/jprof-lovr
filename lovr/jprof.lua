@@ -24,6 +24,12 @@ local profiler = {}
 local zoneStack = {nil, nil, nil, nil, nil, nil, nil, nil,
                    nil, nil, nil, nil, nil, nil, nil, nil}
 local profData = {}
+
+local gpuPass = nil
+local gpuPushTime = 0
+local gpuPushData = {}
+local gpuPopData = {}
+
 local netBuffer = nil
 local profEnabled = true
 -- profMem keeps track of the amount of memory allocated by prof.push/prof.pop
@@ -56,17 +62,34 @@ local function msgpackListIntoFile(list, filename)
     end
 end
 
-local function addEvent(name, memCount, annot)
-    local event = {name, lovr.timer.getTime(), memCount, annot}
+local function addEvent(name, memCount, annot, gpuPush, gpuPop)
+    local event = nil
+    if gpuPush then
+        event = {name, lovr.timer.getTime(), memCount, annot, gpuPass}
+    elseif gpuPop then
+        event = {name, gpuPushTime,          memCount, annot, gpuPass}
+    else
+        event = {name, lovr.timer.getTime(), memCount, annot}
+    end
     if profData then
         table.insert(profData, event)
     end
     if netBuffer then
         table.insert(netBuffer, event)
     end
+    if gpuPushData and gpuPush then
+        table.insert(gpuPushData, event)
+    end
+    if gpuPopData and gpuPop then
+        table.insert(gpuPopData, event)
+    end
 end
 
 if not PROF_NOCAPTURE then
+    if lovr.graphics.setTimingEnabled then
+        lovr.graphics.setTimingEnabled(true)
+    end
+
     function profiler.push(name, annotation)
         if not profEnabled then return end
 
@@ -114,12 +137,51 @@ if not PROF_NOCAPTURE then
         end
     end
 
+    function profiler.startFrame()
+        profiler.popAll() -- pop 'frame', except on the first frame when we haven't pushed 'frame' yet
+        profiler.push('frame')
+    end
+
+    function profiler.pushPopGPU(pass, annotation)
+        if not profEnabled then return end
+        assert(lovr.graphics.setTimingEnabled, 'update to lovr dev branch if you want to use GPU timing')
+
+        gpuPushTime = lovr.timer.getTime()
+        gpuPass = pass
+        local memCount = collectgarbage("count")
+        addEvent('GPU', memCount - profMem, annotation, true)
+        addEvent('pop', memCount - profMem, nil,        false, true)
+
+        if profData then
+            profMem = profMem + (collectgarbage("count") - memCount)
+        end
+    end
+
     function profiler.write(filename)
+        profiler.pop('frame')
         assert(#zoneStack == 0, "(jprof) Zone stack is not empty")
 
         if not profData then
             print("(jprof) No profiling data saved (probably because you called prof.connect())")
         else
+            -- populate annotations
+            for _,v in pairs(gpuPushData) do
+                -- v: {name, gpuPushTime, memCount, annot, pass}
+                if v[5] then
+                    v[4] = v[5]:getStats().memoryUsed/1000 .. ' KB VRAM' -- assuming `memoryUsed` is bytes
+                    -- v[2] = v[2] + v[5]:getStats().submitTime + v[5]:getStats().gpuTime
+                    v[5] = nil
+                end
+            end
+            -- populate GPU times
+            for _,v in pairs(gpuPopData) do
+                -- v: {name, gpuPushTime, memCount, annot, pass}
+                if v[5] then
+                    v[2] = v[2] + v[5]:getStats().submitTime + v[5]:getStats().gpuTime
+                    v[5] = nil
+                end
+            end
+
             lovr.filesystem.write(filename, '')
             msgpackListIntoFile(profData, filename)
             print(("(jprof) Saved profiling data to '%s'"):format(filename))
@@ -188,6 +250,8 @@ else
 
     profiler.push = noop
     profiler.pop = noop
+    profiler.pushPopGPU = noop
+    profiler.startFrame = noop
     profiler.write = noop
     profiler.enabled = noop
     profiler.connect = noop
