@@ -142,6 +142,10 @@ if not PROF_NOCAPTURE then
         profiler.push('frame')
     end
 
+    function profiler.endFrame()
+        profiler.pop('frame')
+    end
+
     function profiler.pushPopGPU(pass, annotation)
         if not profEnabled then return end
         assert(lovr.graphics.setTimingEnabled, 'update to lovr dev branch if you want to use GPU timing')
@@ -158,7 +162,7 @@ if not PROF_NOCAPTURE then
     end
 
     function profiler.write(filename)
-        profiler.pop('frame')
+        profiler.popAll()
         assert(#zoneStack == 0, "(jprof) Zone stack is not empty")
 
         if not profData then
@@ -252,6 +256,8 @@ else
     profiler.pushGPU = noop
     profiler.popGPU = noop
     profiler.pushPopGPU = noop
+    profiler.startFrame = noop
+    profiler.endFrame = noop
     profiler.write = noop
     profiler.enabled = noop
     profiler.connect = noop

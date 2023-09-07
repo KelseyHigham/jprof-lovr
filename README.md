@@ -51,6 +51,7 @@ function lovr.draw(pass)
     -- push and pop additional zones here
     prof.pop("draw")
     prof.pushPopGPU(pass)
+    -- prof.endFrame() -- optional; measures just user code, instead of total frame time
 end
 
 function lovr.quit()
