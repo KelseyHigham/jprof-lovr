@@ -25,10 +25,9 @@ local zoneStack = {nil, nil, nil, nil, nil, nil, nil, nil,
                    nil, nil, nil, nil, nil, nil, nil, nil}
 local profData = {}
 
-local gpuPass = nil
-local gpuPushTime = 0
-local gpuPushData = {}
-local gpuPopData = {}
+local gpuPushCache = {}
+local gpuPopCache = {}
+local framePopCache = {}
 
 local netBuffer = nil
 local profEnabled = true
@@ -62,26 +61,18 @@ local function msgpackListIntoFile(list, filename)
     end
 end
 
-local function addEvent(name, memCount, annot, gpuPop, gpuPush)
+local function addEvent(name, memCount, annot, lovrPass, cacheTable)
     local event = nil
-    if gpuPush then
-        event = {name, lovr.timer.getTime(), memCount, annot, gpuPass}
-    elseif gpuPop then
-        event = {name, gpuPushTime,          memCount, annot, gpuPass}
-    else
-        event = {name, lovr.timer.getTime(), memCount, annot}
-    end
+    event = {name, lovr.timer.getTime(), memCount, annot, lovrPass}
+
     if profData then
         table.insert(profData, event)
     end
     if netBuffer then
         table.insert(netBuffer, event)
     end
-    if gpuPushData and gpuPush then
-        table.insert(gpuPushData, event)
-    end
-    if gpuPopData and gpuPop then
-        table.insert(gpuPopData, event)
+    if cacheTable then
+        table.insert(cacheTable, event)
     end
 end
 
@@ -137,27 +128,26 @@ if not PROF_NOCAPTURE then
         end
     end
 
-    function profiler.startFrame()
-        profiler.popAll() -- pop 'frame', except on the first frame when we haven't pushed 'frame' yet
-        profiler.push('frame')
+    function profiler.pushFrame(annotation)
+        profiler.push('frame', annotation)
     end
 
-    function profiler.endFrame()
-        profiler.pop('frame')
-    end
+    function profiler.popFrame(pass)
+        if pass then
+            if not profEnabled then return end
+            assert(lovr.graphics.setTimingEnabled, 'update to lovr dev branch if you want to use GPU timing')
 
-    function profiler.pushPopGPU(pass, annotation)
-        if not profEnabled then return end
-        assert(lovr.graphics.setTimingEnabled, 'update to lovr dev branch if you want to use GPU timing')
+            local memCount = collectgarbage("count")
+            addEvent('GPU', memCount - profMem, annotation, pass, gpuPushCache)
+            addEvent('pop', memCount - profMem, nil,        pass, gpuPopCache)
+            table.remove(zoneStack)
+            addEvent('pop', memCount - profMem, nil,        pass, framePopCache)
 
-        gpuPushTime = lovr.timer.getTime()
-        gpuPass = pass
-        local memCount = collectgarbage("count")
-        addEvent('GPU', memCount - profMem, annotation, false, true)
-        addEvent('pop', memCount - profMem, nil,        true)
-
-        if profData then
-            profMem = profMem + (collectgarbage("count") - memCount)
+            if profData then
+                profMem = profMem + (collectgarbage("count") - memCount)
+            end
+        else
+            profiler.pop('frame')
         end
     end
 
@@ -168,17 +158,25 @@ if not PROF_NOCAPTURE then
         if not profData then
             print("(jprof) No profiling data saved (probably because you called prof.connect())")
         else
-            -- populate annotations
-            for _,v in pairs(gpuPushData) do
-                -- v: {name, gpuPushTime, memCount, annot, pass}
+            -- populate GPU annotations
+            for _,v in pairs(gpuPushCache) do
+                -- v: {name, time, memCount, annot, lovrPass}
                 if v[5] then
-                    v[4] = string.format('%.0f ms submit', v[5]:getStats().submitTime/1000)
+                    v[4] = v[5]:getStats().draws .. ' draws'
                     v[5] = nil
                 end
             end
             -- populate GPU times
-            for _,v in pairs(gpuPopData) do
-                -- v: {name, gpuPushTime, memCount, annot, pass}
+            for _,v in pairs(gpuPopCache) do
+                -- v: {name, time, memCount, annot, lovrPass}
+                if v[5] then
+                    v[2] = v[2] + v[5]:getStats().submitTime + v[5]:getStats().gpuTime
+                    v[5] = nil
+                end
+            end
+            -- populate frame end times, based on GPU
+            for _,v in pairs(framePopCache) do
+                -- v: {name, time, memCount, annot, lovrPass}
                 if v[5] then
                     v[2] = v[2] + v[5]:getStats().submitTime + v[5]:getStats().gpuTime
                     v[5] = nil
@@ -253,11 +251,8 @@ else
 
     profiler.push = noop
     profiler.pop = noop
-    profiler.pushGPU = noop
-    profiler.popGPU = noop
-    profiler.pushPopGPU = noop
-    profiler.startFrame = noop
-    profiler.endFrame = noop
+    profiler.popFrame = noop
+    profiler.pushFrame = noop
     profiler.write = noop
     profiler.enabled = noop
     profiler.connect = noop

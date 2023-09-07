@@ -39,7 +39,7 @@ PROF_NOCAPTURE = false
 prof = require("jprof")
 
 function lovr.update(dt)
-    prof.startFrame()
+    prof.pushFrame()
     prof.push("update")
     -- push and pop additional zones here
     -- also update your game if you want
@@ -50,8 +50,7 @@ function lovr.draw(pass)
     prof.push("draw")
     -- push and pop additional zones here
     prof.pop("draw")
-    prof.pushPopGPU(pass)
-    -- prof.endFrame() -- optional; measures just user code, instead of total frame time
+    prof.popFrame(pass) -- optional argument for GPU profiling
 end
 
 function lovr.quit()
@@ -61,7 +60,15 @@ end
 
 If `PROF_NOCAPTURE` evaluates to `true` when jprof-lovr is imported, all profiling functions are replaced with `function() end` i.e. do nothing, so you can leave them in even for release builds.
 
-Also all other zones have to be pushed after `startFrame()` and if `prof.push` or `prof.pop` are called before the first frame, the viewer will not know how to interpret that data (and error).
+Also all other zones have to be pushed inside the `prof.pushFrame` zone and whenever `prof.push` or `prof.pop` are called outside of a frame, the viewer will not know how to interpret that data (and error).
+
+You can pass `pass` to `prof.popFrame` to profile the GPU.
+
+### `prof.pushFrame(annotation)`
+The `annotation` is optional and appears as metadata in the viewer.
+
+### `prof.popFrame(pass)`
+The `pass` is optional and adds a "GPU" field in the viewer.
 
 ### `prof.push(name, annotation)`
 The `annotation` is optional and appears as metadata in the viewer.
