@@ -24,7 +24,7 @@ function bar()
 end
 ```
 
-These are then saved to a file in your application's save directory, which you can analyze in the love2d-based viewer:
+These are then saved with to a file in your application's [save directory](https://lovr.org/docs/lovr.filesystem#Notes), which you can analyze in the love2d-based viewer:
 
 ![Time mode](https://user-images.githubusercontent.com/2214632/32568512-c2a04ec8-c4be-11e7-8964-cda8d96f4e9e.png)
 
