@@ -45,6 +45,8 @@ end
 -- -- used during packing can exceed the luajit memory limit pretty quickly, which will
 -- -- terminate the program before the file is written.
 local function msgpackListIntoFile(list, filename)
+    -- start with blank file, then append
+    lovr.filesystem.write(filename, '')
     local n = #list
     -- https://github.com/msgpack/msgpack/blob/master/spec.md#array-format-family
     if n < 16 then
@@ -135,13 +137,17 @@ if not PROF_NOCAPTURE then
     function profiler.popFrame(pass)
         if pass then
             if not profEnabled then return end
-            assert(lovr.graphics.setTimingEnabled, 'update to lovr dev branch if you want to use GPU timing')
+            assert(lovr.graphics.setTimingEnabled, '(jprof) Update to LÖVR dev branch if you want to use GPU timing')
 
             local memCount = collectgarbage("count")
             addEvent('GPU', memCount - profMem, annotation, pass, gpuPushCache)
             addEvent('pop', memCount - profMem, nil,        pass, gpuPopCache)
+
             table.remove(zoneStack)
             addEvent('pop', memCount - profMem, nil,        pass, framePopCache)
+            if profiler.socket and #zoneStack == 0 then
+                profiler.netFlush()
+            end
 
             if profData then
                 profMem = profMem + (collectgarbage("count") - memCount)
@@ -158,6 +164,8 @@ if not PROF_NOCAPTURE then
         if not profData then
             print("(jprof) No profiling data saved (probably because you called prof.connect())")
         else
+            print('(jprof) Writing profiling data to \n        ' .. lovr.filesystem.getSaveDirectory() .. '/' .. filename)
+            local time = lovr.timer.getTime()
             -- populate GPU annotations
             for _,v in pairs(gpuPushCache) do
                 -- v: {name, time, memCount, annot, lovrPass}
@@ -183,9 +191,9 @@ if not PROF_NOCAPTURE then
                 end
             end
 
-            lovr.filesystem.write(filename, '')
             msgpackListIntoFile(profData, filename)
-            print(("(jprof) Saved profiling data to '%s'"):format(filename))
+            time = lovr.timer.getTime() - time
+            print(string.format('(jprof) Finished writing (%.1fs)', time))
         end
     end
 
