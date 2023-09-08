@@ -357,7 +357,7 @@ function love.draw()
     -- render flame graph for current frame
     prof.push("flame graph")
     lg.setFont(fonts.mode)
-    lg.print("graph type: " .. draw.flameGraphType, 5, 5)
+    lg.print("graph type: " .. draw.flameGraphType .. '\nhelp: h or f1', 5, 5)
     lg.setFont(fonts.node)
     -- do not order flame layers (just center) if either memory graph or average frame
     local node = util.getNodeByPath(frames.current, rootPath)
