@@ -30,6 +30,8 @@ These are then saved with to a file in your application's [save directory](https
 
 ![Memory mode](https://user-images.githubusercontent.com/2214632/32566607-c39c648e-c4b8-11e7-88a5-a6f5d17d6b2c.png)
 
+*purple is frame time; green is memory usage*
+
 # Documentation
 Before you annotate your code, you need to copy (or move) `lovr/jprof.lua` and `lovr/MessagePack.lua` into your LÖVR game's directory.
 
