@@ -350,9 +350,14 @@ function love.draw()
     local totalFramesText = ("total frames: %d"):format(#frames)
     lg.print(totalFramesText, winW - lg.getFont():getWidth(totalFramesText) - 5, textY)
 
+    lg.setColor(const.memGraphColor)
+    lg.rectangle("fill", 5, graphY + 6, 5, 5)
+    lg.setColor(const.timeGraphColor)
+    lg.rectangle("fill", 5, graphY + 6 + lg.getFont():getHeight(), 5, 5)
+    lg.setColor(const.textColor)
+    lg.print(("memory usage (max: %d KB)"):format(frames.maxMemUsage), 15, graphY)
     lg.print(("frame time (max: %f ms)"):format(frames.maxDeltaTime*1000),
-        5, graphY + lg.getFont():getHeight())
-    lg.print(("memory usage (max: %d KB)"):format(frames.maxMemUsage), 5, graphY)
+        15, graphY + lg.getFont():getHeight())
 
     -- render flame graph for current frame
     prof.push("flame graph")

@@ -23,6 +23,8 @@ local const = {
     graphBorderColor = {0.3, 0.3, 0.3},
     timeGraphColor = {1, 0, 1},
     memGraphColor = {0, 1, 0},
+    -- timeGraphColor = {.91, .27, .6},
+    -- memGraphColor = {.01, .66, .9},
 
     helpOverlayColor = {0, 0, 0, 0.8},
     helpTitleColor = {1, 1, 1},
