@@ -87,7 +87,7 @@ if not PROF_NOCAPTURE then
         if not profEnabled then return end
 
         if #zoneStack == 0 then
-            assert(name == "frame", "(jprof) You may only push the 'frame' zone onto an empty stack")
+            assert(name == "frame", "(jprof) No frame on current stack. You must pushFrame() before you can push(). Or you might have too many pop() statements")
         end
 
         local memCount = collectgarbage("count")
@@ -110,7 +110,7 @@ if not PROF_NOCAPTURE then
 
         if name then
             assert(zoneStack[#zoneStack] == name,
-                ("(jprof) Top of zone stack, does not match the zone passed to prof.pop ('%s', on top: '%s')!"):format(name, zoneStack[#zoneStack]))
+                ("(jprof) Trying to pop('%s'), but '%s' is at the top of the stack"):format(name, zoneStack[#zoneStack]))
         end
 
         local memCount = collectgarbage("count")
@@ -158,13 +158,13 @@ if not PROF_NOCAPTURE then
     end
 
     function profiler.write(filename)
-        profiler.popAll()
+        profiler.popAll() -- i forget why i put this here. it'll cause a confusing error if you call profiler.write() right before popping something else...
         assert(#zoneStack == 0, "(jprof) Zone stack is not empty")
 
         if not profData then
             print("(jprof) No profiling data saved (probably because you called prof.connect())")
         else
-            print('(jprof) Writing profiling data to \n        ' .. lovr.filesystem.getSaveDirectory() .. '/' .. filename)
+            print('(jprof) Started writing profiling data to \n        ' .. lovr.filesystem.getSaveDirectory() .. '/' .. filename)
             local time = lovr.timer.getTime()
             -- populate GPU annotations
             for _,v in pairs(gpuPushCache) do
